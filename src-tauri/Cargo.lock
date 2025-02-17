@@ -889,6 +889,8 @@ name = "dltracker"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "lazy_static",
+ "parking_lot",
  "serde",
  "serde_json",
  "tauri",
