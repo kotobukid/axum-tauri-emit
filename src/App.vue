@@ -17,20 +17,10 @@ async function greet() {
       <input id="greet-input" v-model="name" placeholder="Enter a name..."/>
       <button type="submit">Greet</button>
     </form>
-    <p>{{ greetMsg }}!!</p>
+    <p>{{ greetMsg }}</p>
   </main>
 </template>
 
-<style scoped>
-.logo.vite:hover {
-  filter: drop-shadow(0 0 2em #747bff);
-}
-
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #249b73);
-}
-
-</style>
 <style>
 :root {
   font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
