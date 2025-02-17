@@ -1,0 +1,2 @@
+### GET request to background server
+GET http://localhost:30000/
