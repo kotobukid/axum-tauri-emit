@@ -37,6 +37,13 @@ async function greet() {
   </main>
 </template>
 
+<style scoped>
+.new_download_info {
+  width: 100%;
+  word-break: break-all;
+}
+</style>
+
 <style>
 :root {
   font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
