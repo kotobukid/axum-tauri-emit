@@ -1,9 +1,24 @@
 <script setup lang="ts">
-import {ref} from "vue";
+import {ref, onMounted} from "vue";
 import {invoke} from "@tauri-apps/api/core";
+import {useFileEvent} from "./composables/FileEvent";
 
 const greetMsg = ref("");
 const name = ref("");
+
+const {setupEventListener} = useFileEvent();
+
+const handleFile = (file_event: string) => {
+  newDownloadInfo.value = file_event;
+}
+
+const newDownloadInfo = ref('');
+
+onMounted(async () => {
+
+  await setupEventListener(handleFile);
+
+})
 
 async function greet() {
   // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -13,6 +28,7 @@ async function greet() {
 
 <template>
   <main class="container">
+    <div class="new_download_info" v-if="newDownloadInfo" v-text="newDownloadInfo"></div>
     <form class="row" @submit.prevent="greet">
       <input id="greet-input" v-model="name" placeholder="Enter a name..."/>
       <button type="submit">Greet</button>
