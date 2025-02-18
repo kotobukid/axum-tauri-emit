@@ -1,12 +1,12 @@
 use axum::http::StatusCode;
-use axum::response::IntoResponse;
 use axum::{extract::Json, routing::get, Router};
 use lazy_static::lazy_static;
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter};
 use tokio::{spawn, sync::mpsc};
 use tower_http::cors::{Any, CorsLayer};
 
@@ -31,16 +31,6 @@ struct DownloadFileInfo {
     remote_id: i64,
 }
 
-async fn receive_download_file_info(Json(payload): Json<DownloadFileInfo>) -> impl IntoResponse {
-    // 抽出した構造体を利用
-    println!("Received URL: {}", payload.url);
-    println!("Received Hash: {}", payload.hash);
-    println!("Received Remote ID: {}", payload.remote_id);
-
-    // 正常なレスポンスを返す
-    (StatusCode::OK, "Download info received")
-}
-
 async fn start_axum_server() {
     let (tx, mut rx) = mpsc::channel::<String>(32);
 
@@ -49,7 +39,6 @@ async fn start_axum_server() {
             if let Some(handle) = GLOBAL_APP_HANDLE.read().as_ref() {
                 println!("Sending message to Tauri: {}", message);
                 handle.emit_filter("axum_event", message, |_| true).unwrap();
-                // handle.emit_all("axum_event", message).unwrap();
             }
         }
     });
@@ -77,24 +66,22 @@ async fn start_axum_server() {
             "/download_file_info",
             axum::routing::post({
                 let state = shared_state.clone();
-                move |Json(payload): Json<DownloadFileInfo>| {
+                move |Json(payload): Json<Value>| {
                     let state = state.clone();
                     async move {
-                        // `DownloadFileInfo`のデータをログ出力
-                        println!(
-                            "Received DownloadFileInfo: url={}, hash={}, remote_id={}",
-                            payload.url, payload.hash, payload.remote_id
-                        );
+                        if let Ok(download_file_info) =
+                            serde_json::from_value::<DownloadFileInfo>(payload.clone())
+                        {
+                            println!(
+                                "Parsed DownloadFileInfo: url={}, hash={}, remote_id={}",
+                                download_file_info.url,
+                                download_file_info.hash,
+                                download_file_info.remote_id
+                            );
+                        }
 
                         // Tauriにデータを送信
-                        if let Err(err) = state
-                            .tx
-                            .send(format!(
-                        "Received file info for processing - URL: {}, Hash: {}, Remote ID: {}",
-                        payload.url, payload.hash, payload.remote_id
-                    ))
-                            .await
-                        {
+                        if let Err(err) = state.tx.send(payload.to_string()).await {
                             eprintln!("Failed to send message to Tauri: {}", err);
                         }
 
