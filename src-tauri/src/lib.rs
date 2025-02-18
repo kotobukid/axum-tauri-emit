@@ -1,6 +1,9 @@
-use axum::{routing::get, Router};
+use axum::http::StatusCode;
+use axum::response::IntoResponse;
+use axum::{extract::Json, routing::get, Router};
 use lazy_static::lazy_static;
 use parking_lot::RwLock;
+use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter, Manager};
@@ -19,6 +22,23 @@ fn greet(name: &str) -> String {
 
 struct AxumState {
     tx: mpsc::Sender<String>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct DownloadFileInfo {
+    url: String,
+    hash: String,
+    remote_id: i64,
+}
+
+async fn receive_download_file_info(Json(payload): Json<DownloadFileInfo>) -> impl IntoResponse {
+    // 抽出した構造体を利用
+    println!("Received URL: {}", payload.url);
+    println!("Received Hash: {}", payload.hash);
+    println!("Received Remote ID: {}", payload.remote_id);
+
+    // 正常なレスポンスを返す
+    (StatusCode::OK, "Download info received")
 }
 
 async fn start_axum_server() {
@@ -53,6 +73,37 @@ async fn start_axum_server() {
             }),
         )
         .route("/health_check", get(|| async { "OK" }))
+        .route(
+            "/download_file_info",
+            axum::routing::post({
+                let state = shared_state.clone();
+                move |Json(payload): Json<DownloadFileInfo>| {
+                    let state = state.clone();
+                    async move {
+                        // `DownloadFileInfo`のデータをログ出力
+                        println!(
+                            "Received DownloadFileInfo: url={}, hash={}, remote_id={}",
+                            payload.url, payload.hash, payload.remote_id
+                        );
+
+                        // Tauriにデータを送信
+                        if let Err(err) = state
+                            .tx
+                            .send(format!(
+                        "Received file info for processing - URL: {}, Hash: {}, Remote ID: {}",
+                        payload.url, payload.hash, payload.remote_id
+                    ))
+                            .await
+                        {
+                            eprintln!("Failed to send message to Tauri: {}", err);
+                        }
+
+                        // レスポンスを返す
+                        (StatusCode::OK, "Download info received and sent to Tauri")
+                    }
+                }
+            }),
+        )
         .layer(cors);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 30000));
