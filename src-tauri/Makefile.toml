@@ -1,0 +1,13 @@
+[tasks.CLIPPY]
+description = "lint strictly"
+script = ['''
+cargo clippy -- -D warnings"
+''']
+
+#[tasks.TEST]
+#description = "Test hoge"
+#script = ['''
+##!/usr/bin/env python3
+#print("test ...")
+#''']
+#dependencies = ["BUILD"]
