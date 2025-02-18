@@ -1,2 +1,6 @@
 ### GET request to background server
 GET http://localhost:30000/
+
+
+### GET tracker health check endpoint
+GET http://localhost:30000/health_check

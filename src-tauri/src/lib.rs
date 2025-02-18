@@ -52,6 +52,7 @@ async fn start_axum_server() {
                 }
             }),
         )
+        .route("/health_check", get(|| async { "OK" }))
         .layer(cors);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 30000));
