@@ -1,10 +1,11 @@
 use axum::{routing::get, Router};
-use std::net::SocketAddr;
-use tauri::{AppHandle, Emitter, Manager};
-use tokio::{sync::mpsc, spawn};
-use std::sync::Arc;
 use lazy_static::lazy_static;
 use parking_lot::RwLock;
+use std::net::SocketAddr;
+use std::sync::Arc;
+use tauri::{AppHandle, Emitter, Manager};
+use tokio::{spawn, sync::mpsc};
+use tower_http::cors::{Any, CorsLayer};
 
 // グローバルなAppHandleの保存用
 lazy_static! {
@@ -27,22 +28,31 @@ async fn start_axum_server() {
         while let Some(message) = rx.recv().await {
             if let Some(handle) = GLOBAL_APP_HANDLE.read().as_ref() {
                 println!("Sending message to Tauri: {}", message);
-                handle.emit_filter("axum_event", message, |_|{true}).unwrap();
+                handle.emit_filter("axum_event", message, |_| true).unwrap();
                 // handle.emit_all("axum_event", message).unwrap();
             }
         }
     });
 
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any);
+
     let shared_state = Arc::new(AxumState { tx });
 
     let app = Router::new()
-        .route("/", get({
-            let state = shared_state.clone();
-            move || async move {
-                let _ = state.tx.send("Hello from Axum to Tauri!".to_string()).await;
-                "Hello from Axum!"
-            }
-        }));
+        .route(
+            "/",
+            get({
+                let state = shared_state.clone();
+                move || async move {
+                    let _ = state.tx.send("Hello from Axum to Tauri!".to_string()).await;
+                    "Hello from Axum!"
+                }
+            }),
+        )
+        .layer(cors);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 30000));
     println!("Axum server starting on {}", addr);
